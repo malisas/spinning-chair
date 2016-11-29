@@ -10,7 +10,7 @@ Spins the chair by 1 degree around the X-axis and 2 degrees around the Y-axis, e
 
 # Dependencies:
 
-Python 3.0
+Python 2.7
 
 `pip install --user http://bit.ly/csc161graphics`
 
