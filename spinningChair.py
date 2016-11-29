@@ -1,9 +1,10 @@
 #!/usr/bin/python
 
-"""Author: Malisa Smith    Date: 11-25-2016
+"""
+Author: Malisa Smith    Date: 11-25-2016
 
 This program can by run via the following command:
-python spinningChair.py
+python spinningChair.py rotX rotY rotZ
 """
 
 from graphics import *
@@ -80,25 +81,10 @@ class PointXYZ:
     def getY(self): return self.y
     def getZ(self): return self.z
 
-class LineXYZ:
-    # uses the two PointXYZ parameters to create the line
-    def __init__(self, pointxyz1, pointxyz2):
-        self.pointxyz1 = pointxyz1
-        self.pointxyz2 = pointxyz2
-
-    def __repr__(self):
-        return "LineXYZ({}, {})".format(self.pointxyz1.__repr__(), self.pointxyz2.__repr__())
-
-    # maps the LineXYZ onto the xy-axis and draws it
-    def draw(self, win):
-        line2d = Line(Point(self.pointxyz1.getX(), self.pointxyz1.getY()), Point(self.pointxyz2.getX(), self.pointxyz2.getY()))
-        line2d.draw(win)
-
-    # rotate the line around each axis by the given degrees
-    # pointXYZofRotation sets the optional location of the axes of rotation
-    def rotate(self, rotX, rotY, rotZ, pointXYZofRotation):
-        self.pointxyz1.rotate(rotX, rotY, rotZ, pointXYZofRotation)
-        self.pointxyz2.rotate(rotX, rotY, rotZ, pointXYZofRotation)
+class PolygonFlexible(Polygon):
+    def moveEachPt(self, ptDeltas):
+        for i in range(len(ptDeltas)):
+            self.points[i].move(ptDeltas[i][0], ptDeltas[i][1])
 
 class RectangleXYZ:
     # uses the four PointXYZ parameters to create the rectangle
@@ -106,13 +92,10 @@ class RectangleXYZ:
     def __init__(self, pointxyz1, pointxyz2, pointxyz3, pointxyz4):
         self.points = [pointxyz1, pointxyz2, pointxyz3, pointxyz4]
         polygonPtsXY = [Point(pt.getX(), pt.getY()) for pt in self.points]
-        self.polygon = Polygon(polygonPtsXY)
+        self.polygon = PolygonFlexible(polygonPtsXY)
         self.polygon.setFill("gray")
 
     def draw(self, win):
-        polygonPtsXY = [Point(pt.getX(), pt.getY()) for pt in self.points]
-        self.polygon = Polygon(polygonPtsXY)
-        self.polygon.setFill("gray")
         self.polygon.draw(win)
 
     def undraw(self):
@@ -121,8 +104,13 @@ class RectangleXYZ:
     # rotate the rectangle around each axis by the given degrees
     # pointXYZofRotation sets the optional location of the axes of rotation
     def rotate(self, rotX, rotY, rotZ, pointXYZofRotation):
+        ptDeltas = []
         for pt in self.points:
+            ptOldX = pt.getX()
+            ptOldY = pt.getY()
             pt.rotate(rotX, rotY, rotZ, pointXYZofRotation)
+            ptDeltas.append([pt.getX() - ptOldX, pt.getY() - ptOldY])
+        self.polygon.moveEachPt(ptDeltas)
 
     def minX(self):
         return min([pt.getX() for pt in self.points])
@@ -143,7 +131,11 @@ class RectangleXYZ:
         return max([pt.getZ() for pt in self.points])
 
     def __repr__(self):
-        return "RectangleXYZ({}, {}, {}, {})".format(self.points[0].__repr__(), self.points[1].__repr__(), self.points[2].__repr__(), self.points[3].__repr__())
+        return "RectangleXYZ({}, {}, {}, {})".format(
+            self.points[0].__repr__(),
+            self.points[1].__repr__(),
+            self.points[2].__repr__(),
+            self.points[3].__repr__())
 
 class Cuboid:
     # uses the two PointXYZ parameters to create the cuboid facing straight on
@@ -160,12 +152,30 @@ class Cuboid:
 
     def defineRectangles(self):
         self.rectanglexyzs = [
-            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z1), PointXYZ(self.x1, self.y1, self.z2), PointXYZ(self.x1, self.y2, self.z2), PointXYZ(self.x1, self.y2, self.z1)),
-            RectangleXYZ(PointXYZ(self.x2, self.y1, self.z1), PointXYZ(self.x2, self.y1, self.z2), PointXYZ(self.x2, self.y2, self.z2), PointXYZ(self.x2, self.y2, self.z1)),
-            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z1), PointXYZ(self.x1, self.y1, self.z2), PointXYZ(self.x2, self.y1, self.z2), PointXYZ(self.x2, self.y1, self.z1)),
-            RectangleXYZ(PointXYZ(self.x1, self.y2, self.z1), PointXYZ(self.x1, self.y2, self.z2), PointXYZ(self.x2, self.y2, self.z2), PointXYZ(self.x2, self.y2, self.z1)),
-            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z1), PointXYZ(self.x1, self.y2, self.z1), PointXYZ(self.x2, self.y2, self.z1), PointXYZ(self.x2, self.y1, self.z1)),
-            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z2), PointXYZ(self.x1, self.y2, self.z2), PointXYZ(self.x2, self.y2, self.z2), PointXYZ(self.x2, self.y1, self.z2))]
+            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z1),
+                         PointXYZ(self.x1, self.y1, self.z2),
+                         PointXYZ(self.x1, self.y2, self.z2),
+                         PointXYZ(self.x1, self.y2, self.z1)),
+            RectangleXYZ(PointXYZ(self.x2, self.y1, self.z1),
+                         PointXYZ(self.x2, self.y1, self.z2),
+                         PointXYZ(self.x2, self.y2, self.z2),
+                         PointXYZ(self.x2, self.y2, self.z1)),
+            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z1),
+                         PointXYZ(self.x1, self.y1, self.z2),
+                         PointXYZ(self.x2, self.y1, self.z2),
+                         PointXYZ(self.x2, self.y1, self.z1)),
+            RectangleXYZ(PointXYZ(self.x1, self.y2, self.z1),
+                         PointXYZ(self.x1, self.y2, self.z2),
+                         PointXYZ(self.x2, self.y2, self.z2),
+                         PointXYZ(self.x2, self.y2, self.z1)),
+            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z1),
+                         PointXYZ(self.x1, self.y2, self.z1),
+                         PointXYZ(self.x2, self.y2, self.z1),
+                         PointXYZ(self.x2, self.y1, self.z1)),
+            RectangleXYZ(PointXYZ(self.x1, self.y1, self.z2),
+                         PointXYZ(self.x1, self.y2, self.z2),
+                         PointXYZ(self.x2, self.y2, self.z2),
+                         PointXYZ(self.x2, self.y1, self.z2))]
 
     def draw(self, win):
         # sort rectangles by Z-value so that objects in front are drawn last
@@ -211,7 +221,13 @@ class Cuboid:
         return max([rect.maxZ() for rect in self.rectanglexyzs])
 
     def __repr__(self):
-        return "Cuboid({}, {}, {}, {}, {}, {})".format(self.rectanglexyzs[0].__repr__(), self.rectanglexyzs[1].__repr__(), self.rectanglexyzs[2].__repr__(), self.rectanglexyzs[3].__repr__(), self.rectanglexyzs[4].__repr__(), self.rectanglexyzs[5].__repr__())
+        return "Cuboid({}, {}, {}, {}, {}, {})".format(
+            self.rectanglexyzs[0].__repr__(),
+            self.rectanglexyzs[1].__repr__(),
+            self.rectanglexyzs[2].__repr__(),
+            self.rectanglexyzs[3].__repr__(),
+            self.rectanglexyzs[4].__repr__(),
+            self.rectanglexyzs[5].__repr__())
 
 class CuboidCollection:
     # uses the two PointXYZ parameters to create the cuboid facing straight on
@@ -257,39 +273,52 @@ class CuboidCollection:
         return max([cuboid.maxZ() for cuboid in self.cuboids])
 
     def getCenter(self):
-        return PointXYZ((self.minX() + self.maxX())/2, (self.minY() + self.maxY())/2, (self.minZ() + self.maxZ())/2)
+        return PointXYZ((self.minX() + self.maxX())/2,
+                        (self.minY() + self.maxY())/2,
+                        (self.minZ() + self.maxZ())/2)
 
-def spin(thing, rotX, rotY, rotZ, win):
+def spin(thing, win, rotX=1, rotY=2, rotZ=0):
     center = thing.getCenter()
-    while True:
-        thing.undraw()
-        thing.draw(win)
-        thing.rotate(rotX, rotY, rotZ, center)
-        time.sleep(0.07)
+    thing.draw(win)
+    while win.checkMouse() == None:
+        if win.isClosed():
+            break
+        else:
+            thing.undraw()
+            thing.draw(win)
+            thing.rotate(rotX, rotY, rotZ, center)
+            win.flush()
+            time.sleep(0.07)
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    winX, winY = (800, 800)
-    win = GraphWin("Spinning Chair", 700, 700)
+    winX, winY = (900, 800)
+    win = GraphWin("Spinning Chair", winX, winY)
+    win.autoflush = False
 
     # define chair cuboid dimensions:
     # chair is based on: http://www.geocities.ws/sketchup_lessons/sketchup-typicalchairdimensions.jpg
-    scaler = (min(winX, winY)/3)/14
-    shifter = PointXYZ(200, 150, 0) #PointXYZ(winX / 2 - 7 * scaler, winY / 2 - 17 * scaler, 0)
+    scaler = (min(winX, winY)/3)/15
+    shifter = PointXYZ(winX / 2 - 7 * scaler, winY / 2 - 17 * scaler, 0)
     back = Cuboid(PointXYZ(0, 0, 0), PointXYZ(14 * scaler, 16 * scaler, 2 * scaler))
     seat = Cuboid(PointXYZ(0, 16 * scaler, 0), PointXYZ(14 * scaler, 18 * scaler, 16 * scaler))
-    frontRightLeg = Cuboid(PointXYZ(0, 18 * scaler, 14 * scaler), PointXYZ(2 * scaler, 34 * scaler, 16 * scaler))
-    frontLeftLeg = Cuboid(PointXYZ(12 * scaler, 18 * scaler, 14 * scaler), PointXYZ(14 * scaler, 34 * scaler, 16 * scaler))
-    backRightLeg = Cuboid(PointXYZ(0, 18 * scaler, 0), PointXYZ(2 * scaler, 34 * scaler, 2 * scaler))
-    backLeftLeg = Cuboid(PointXYZ(12 * scaler, 18 * scaler, 0), PointXYZ(14 * scaler, 34 * scaler, 2 * scaler))
+    frontRightLeg = Cuboid(PointXYZ(0, 18 * scaler, 14 * scaler),
+                           PointXYZ(2 * scaler, 34 * scaler, 16 * scaler))
+    frontLeftLeg = Cuboid(PointXYZ(12 * scaler, 18 * scaler, 14 * scaler),
+                          PointXYZ(14 * scaler, 34 * scaler, 16 * scaler))
+    backRightLeg = Cuboid(PointXYZ(0, 18 * scaler, 0),
+                          PointXYZ(2 * scaler, 34 * scaler, 2 * scaler))
+    backLeftLeg = Cuboid(PointXYZ(12 * scaler, 18 * scaler, 0),
+                         PointXYZ(14 * scaler, 34 * scaler, 2 * scaler))
 
     chair = CuboidCollection([back, seat, frontRightLeg, frontLeftLeg, backRightLeg, backLeftLeg])
     chair.shift(shifter.getX(), shifter.getY(), shifter.getZ())
-    # obtain center of the chair (not by mass, just mid-points)
-    # use it to rotate the chair
-    spin(chair, 0, 1, 0, win)
+    if len(argv) >= 4:
+        spin(chair, win, int(argv[1]), int(argv[2]), int(argv[3]))
+    else:
+        spin(chair, win)
 
 if __name__ == '__main__':
     sys.exit(main())
